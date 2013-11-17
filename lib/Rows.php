@@ -38,7 +38,11 @@ class Rows implements \Iterator
     for ($i = 0; $i < $this->rowCount; ++$i) {
       $row = array();
       for ($j = 0; $j < $this->columnCount; ++$j) {
-        $row[] = $data->readBytes();
+        try {
+          $row[] = $data->readBytes();
+        } catch (\Exception $e) {
+          $row[] = NULL;
+        }
       }
       $this->rows[] = $row;
     }
@@ -70,8 +74,13 @@ class Rows implements \Iterator
     $row = $this->rows[$this->current];
     $object = new \stdClass();
     for ($i = 0; $i < $this->columnCount; ++$i) {
-      $data = new DataStream($this->rows[$this->current][$i]);
-      $row[$i] = $data->readByType($this->columns[$i]->getType());
+      try {
+        $data = new DataStream($this->rows[$this->current][$i]);
+        $row[$i] = $data->readByType($this->columns[$i]->getType());
+      }
+      catch (\Exception $e) {
+        $row[$i] = NULL;
+      }
     }
     return $row;
   }

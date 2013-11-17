@@ -16,6 +16,9 @@ class DataStream
    * @param string $data
    */
   public function __construct($data) {
+    if (!is_string($data)) {
+      throw new \Exception('Input data is not a string');
+    }
     $this->data = $data;
     $this->length = strlen($data);
   }
@@ -36,7 +39,9 @@ class DataStream
   }
 
   /**
-   * Read single charactre.
+   * Read single character.
+   *
+   * @return int
    */
   public function readChar() {
     return reset(unpack('C', $this->read(1)));
@@ -44,6 +49,8 @@ class DataStream
 
   /**
    * Read unsigned short.
+   *
+   * @return int
    */
   public function readShort() {
     return reset(unpack('n', $this->read(2)));
@@ -51,6 +58,8 @@ class DataStream
 
   /**
    * Read unsigned int.
+   *
+   * @return int
    */
   public function readInt() {
     return reset(unpack('N', $this->read(4)));
@@ -58,6 +67,8 @@ class DataStream
 
   /**
    * Read string.
+   *
+   * @return string
    */
   public function readString() {
     $length = $this->readShort();
@@ -66,6 +77,8 @@ class DataStream
 
   /**
    * Read long string.
+   *
+   * @return string
    */
   public function readLongString() {
     $length = $this->readInt();
@@ -74,6 +87,8 @@ class DataStream
 
   /**
    * Read bytes.
+   *
+   * @return string
    */
   public function readBytes() {
     $length = $this->readInt();
@@ -82,6 +97,8 @@ class DataStream
 
   /**
    * Read uuid.
+   *
+   * @return string
    */
   public function readUuid() {
     $uuid = '';
@@ -102,6 +119,8 @@ class DataStream
    * milliseconds since epoch. Since we cannot use 64 bits integers without
    * extra libraries, we are reading this as two 32 bits numbers and calculate
    * the seconds since epoch.
+   *
+   * @return int
    */
   public function readTimestamp() {
     return round($this->readInt() * 4294967.296 + ($this->readInt() / 1000));
@@ -171,12 +190,69 @@ class DataStream
    * @return string
    */
   public function readInet() {
-    // @todo: Implement IPv6
-    $inet = array();
-    for ($i = 0; $i < 4; ++$i) {
-      $inet[] = $this->readChar();
+    if (strlen($this->data) == 4) {
+      // IPv4
+      $inet = array();
+      for ($i = 0; $i < 4; ++$i) {
+        $inet[] = $this->readChar();
+      }
+      return implode('.', $inet);
     }
-    return implode('.', $inet);
+    elseif (strlen($this->data) == 16) {
+      // IPv6
+      $parts = array();
+      $empty = 0;
+      for ($i = 0; $i < 8; ++$i) {
+        $part = dechex($this->readShort());
+        if ($empty < 2 && $part == '0') {
+          if ($empty == 0) {
+            $empty = 1;
+            $parts[] = '';
+          }
+        }
+        else {
+          $empty = $empty == 1 ? 2 : $empty;
+          $parts[] = $part;
+        }
+      }
+      return implode(':', $parts);
+    }
+  }
+
+  /**
+   * Read variable length integer.
+   *
+   * @return string
+   */
+  public function readVarint() {
+    $len = strlen($this->data);
+    $output = '0';
+    $multiplier = '1';
+    $negative = '';
+    if (ord($this->data{0}) & 0x80) {
+      $negative = TRUE;
+    }
+    for ($i = 0; $i < $len; ++$i) {
+      $last = ord($this->data{$len - $i - 1});
+      $output = bcadd($output, bcmul($last, $multiplier));
+      $multiplier = bcmul($multiplier, 256);
+    }
+    if ($negative) {
+      return bcsub($output, bcpow(2, 8 * $len));
+    }
+    return $output;
+  }
+
+  /**
+   * Read variable length decimal.
+   *
+   * @return string
+   */
+  public function readDecimal() {
+    $scale = $this->readInt();
+    $value = $this->readVarint();
+    $len = strlen($value);
+    return substr($value, 0, $len - $scale) . '.' . substr($value, $len - $scale);
   }
 
   /**
@@ -196,15 +272,14 @@ class DataStream
         return $this->data;
       case TypeSpec::BIGINT:
       case TypeSpec::COUNTER:
-        // @todo
-        break;
+      case TypeSpec::VARINT:
+        return $this->readVarint();
       case TypeSpec::BLOB:
         return $this->readBytes();
       case TypeSpec::BOOLEAN:
         return $this->readBoolean();
       case TypeSpec::DECIMAL:
-        // @todo
-        break;
+        return $this->readDecimal();
       case TypeSpec::DOUBLE:
         return $this->readDouble();
       case TypeSpec::FLOAT:
@@ -215,9 +290,6 @@ class DataStream
         return $this->readTimestamp();
       case TypeSpec::UUID:
         return $this->readUuid();
-      case TypeSpec::VARINT:
-        // @todo
-        break;
       case TypeSpec::TIMEUUID:
         return $this->readUuid();
       case TypeSpec::INET:
