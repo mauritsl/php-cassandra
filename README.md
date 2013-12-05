@@ -38,6 +38,8 @@ $connection = new Cassandra\Connection(array('host:port', 'host:port'), 'namespa
 ?>
 ```
 
+## Iteration
+
 The resultset is inherited from the Iterator class and can therefore be used in foreach loops. It is also possible to use its internal functions in a while loop:
 
 ```php
@@ -49,6 +51,7 @@ while ($rows->valid()) {
 }
 ?>
 ```
+## Column specification
 
 It is possible to get a specification of the columns in the resultset:
 
@@ -85,26 +88,28 @@ foreach ($columns as $column) {
 ?>
 ```
 
+## Supported datatypes
+
 All types are supported.
 
-* ascii, varchar, text
+* *ascii, varchar, text*
   Result will be a string.
-* bigint, counter, varint
+* *bigint, counter, varint*
   Converted to strings using bcmath.
-* blob
+* *blob*
   Result will be a string.
-* boolean
+* *boolean*
   Result will be a boolean as well.
-* decimal
+* *decimal*
   Converted to strings using bcmath.
-* double, float, int
+* *double, float, int*
   Result is using native PHP datatypes.
-* timestamp
+* *timestamp*
   Converted to integer. Milliseconds precision is lost.
-* uuid, timeuuid, inet
+* *uuid, timeuuid, inet*
   No native PHP datatype available. Converted to strings.
-* list, set
+* *list, set*
   Converted to array (numeric keys).
-* map
+* *map*
   Converted to keyed array.
 
