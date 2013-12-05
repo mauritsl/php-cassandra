@@ -47,7 +47,7 @@ class Transport
     }
     $this->connection = @fsockopen($host, $port, $errno, $errstr, $connect_timeout);
     if (!$this->connection) {
-      throw new Exception('Unable to connect to Cassandra node: ' . $errstr, $errno);
+      throw new \Exception('Unable to connect to Cassandra node: ' . $errstr, $errno);
     }
     stream_set_timeout($this->connection, (int) $stream_timeout, ($stream_timeout - (int) $stream_timeout) * 1000000);
   }
@@ -89,11 +89,46 @@ class Transport
       $data['data'] = new DataStream('');
     }
     if ($data['opcode'] == self::ERROR) {
-      $code = $data['data']->readInt();
-      $message = $data['data']->readString();
-      throw new \Exception($message, $code);
+      throw $this->readError($data['data']);
     }
     return $data;
+  }
+
+  /**
+   * Read error frame.
+   *
+   * @param DataStream $data
+   * @return Exception
+   */
+  public function readError(DataStream $data) {
+    $code = $data->readInt();
+    $messages = array(
+      0x0000 => 'Server error',
+      0x000A => 'Protocol error',
+      0x0100 => 'Bad credentials',
+      0x1000 => 'Unavailable',
+      0x1001 => 'Overloaded',
+      0x1002 => 'Is bootstrapping',
+      0x1003 => 'Truncate error',
+      0x1100 => 'Write timeout',
+      0x1200 => 'Read timeout',
+      0x2000 => TRUE,
+      0x2100 => 'Unauthorized',
+      0x2200 => TRUE,
+      0x2300 => 'Config error',
+      0x2400 => 'Already exists',
+      0x2500 => 'Unprepared',
+    );
+    if (isset($messages[$code])) {
+      $message = $messages[$code];
+      if ($message === TRUE) {
+        $message = $data->readString();
+      }
+    }
+    else {
+      $message = 'Unknown error';
+    }
+    return new \Exception($message, $code);
   }
 
   /**
