@@ -17,6 +17,9 @@ require('./cassandra/Cassandra.php');
 // Connect to server.
 $connection = new Cassandra\Connection('localhost', 'test');
 
+// If you have slow connect - try to use IP instead (Windows bug)
+// $connection = new Cassandra\Connection('127.0.0.1', 'test');
+
 // Run query.
 $rows = $connection->query('SELECT * FROM user');
 
