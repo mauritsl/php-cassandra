@@ -14,8 +14,6 @@
         "php": ">=5.3.0"
     },
     "autoload": {
-        "psr-4": {
-            "Mauritsl\\Lib\\": ""
-        }
+        "psr-0": { "Cassandra": "lib" }
     }
 }
