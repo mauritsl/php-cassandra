@@ -1,5 +1,4 @@
 <?php
-
 namespace Cassandra;
 
 require __DIR__ . '/DataStream.php';
