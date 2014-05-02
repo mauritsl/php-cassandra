@@ -45,11 +45,12 @@ class Transport
     else {
       $port = 9042;
     }
-    $this->connection = @fsockopen($host, $port, $errno, $errstr, $connect_timeout);
-    if (!$this->connection) {
-      throw new \Exception('Unable to connect to Cassandra node: ' . $errstr, $errno);
+    $this->connection = socket_create(AF_INET , SOCK_STREAM, SOL_TCP);
+    socket_set_option($this->connection, getprotobyname('TCP'), 1 /*TCP_NODELAY*/, 1);
+    socket_set_option($this->connection,SOL_SOCKET,SO_RCVTIMEO,array("sec"=>$stream_timeout,"usec"=>0));
+    if (!socket_connect($this->connection, $host, $port)) {
+      throw new \Exception('Unable to connect to Cassandra node: ');
     }
-    stream_set_timeout($this->connection, (int) $stream_timeout, ($stream_timeout - (int) $stream_timeout) * 1000000);
   }
 
   /**
@@ -67,8 +68,8 @@ class Transport
     $length = strlen($body);
 
     $header = pack('CCcCN', $version, $flags, $stream, $opcode, $length);
-    fwrite($this->connection, $header);
-    fwrite($this->connection, $body);
+    socket_write($this->connection, $header);
+    socket_write($this->connection, $body);
 
     return $stream;
   }
@@ -138,9 +139,11 @@ class Transport
    * @return string
    */
   protected function fetchData($length) {
-    $data = fread($this->connection, $length);
-    $info = stream_get_meta_data($this->connection);
-    if ($info['timed_out']) {
+    $data = socket_read($this->connection, $length);
+    while(strlen($data) < $length) {
+        $data .= socket_read($this->connection, $length);
+    }
+    if (socket_last_error($this->connection) == 110) {
       throw new Exception('Connection timed out');
     }
     return $data;
