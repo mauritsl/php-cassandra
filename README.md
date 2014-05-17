@@ -12,7 +12,7 @@ PHP 5.3+ is required. There is no need for additional libraries.
 ```php
 <?php
 
-require('./cassandra/Cassandra.php');
+require('./Cassandra/Cassandra.php');
 
 // Connect to server.
 $connection = new Cassandra\Connection('localhost', 'test');
