@@ -1,0 +1,19 @@
+{
+    "name": "mauritsl/php-cassandra",
+    "type": "library",
+    "description": "PHP Cassandra Library",
+    "keywords": ["apache cassandra", "cassandra"],
+    "homepage": "https://github.com/mauritsl/php-cassandra",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "mauritsl",
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0"
+    },
+    "autoload": {
+        "psr-0": { "Cassandra": "lib" }
+    }
+}
